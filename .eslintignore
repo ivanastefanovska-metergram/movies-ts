@@ -1,6 +1,0 @@
-node_modules
-dst
-coverage
-.nyc_output
-.serverless
-**/modules/**/lib
