@@ -1,5 +1,6 @@
 import Joi from "joi";
 
+// a lot of blank linkes, should not have them
 export const validMovie = Joi.object({
 
     imdbId: Joi.string()

@@ -4,6 +4,7 @@ import { Repository, EntityManager } from 'typeorm';
 import { Movie } from '../database/entity/movie';
 import movies from '../movies.json';
 
+// Add return types on the methods in the class
 export class MovieService {
 
     private moviesTable: Repository<Movie>;
@@ -16,6 +17,8 @@ export class MovieService {
         return await this.moviesTable.find();
     }
 
+    // id instead of ID
+    // unnecessary await after return, the return will wait for the Promise to be fullfiled anyway
     async getSingle(ID: string) {
         return await this.moviesTable.findBy({ imdbId: ID });
     }
@@ -24,6 +27,7 @@ export class MovieService {
         try {
             await this.moviesTable.save(data);
         } catch (error) {
+            // we might want to print the error, so that we know where and on what it failed
             return false;
         }
         return true;
@@ -31,11 +35,17 @@ export class MovieService {
 
     async addMovie(newMovie: Movie) {
 
+        // similar as above 
+        // since this.moviesTable.findBy() returns a Promise we need to wait for it to be resolved
+        // that is the `await this.moviesTable.findBy({ imdbId: newMovie.imdbId })` part
+        // afterwards we have the value and we can just compare it, we dont need additional await
+        // if ((await this.moviesTable.findBy({ imdbId: newMovie.imdbId })).length > 0) {}
         if (await (await this.moviesTable.findBy({ imdbId: newMovie.imdbId })).length > 0) {
             throw new CodeError('Movie Already Exists', 400);
         }
         await this.writeToDB(newMovie);
 
+        // maybe just return this.writeToDB(newMovie); ?
         return true;
     }
 
