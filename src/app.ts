@@ -8,14 +8,11 @@ import { DatabaseConnection } from "./database/connection";
 const app = express();
 
 app.use(express.json());
-app.use(express.static(path.resolve("public")));
 
 app.use('/movies', moviesRouter);
 
-// usually we don't serve static html pages from the BE but returning an appropriate error instead
-// it is great that you've tried this
-app.all('*', (req, res) => {
-    res.status(404).sendFile(path.resolve('public/notFound.html'));
+app.all('*', (_, res) => {
+    res.status(404).end();
 });
 
 async function startServer() {

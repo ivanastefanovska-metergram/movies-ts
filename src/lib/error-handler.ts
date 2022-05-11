@@ -13,18 +13,7 @@ export function wrap(handler: any) {
             });
             res.status(200);
 
-            let successResponse: any = {};
-
-            // We cannot expect to always have Object.keys(result).length of the response
-            // If there is an error it will be in the catch block and a message should be sent from there
-            // The wrap function should return whatever was received as a response (the logic should stays on a different place)
-            if (Object.keys(result).length > 0) {
-                successResponse.response = result;
-            } else {
-                successResponse.success = true;
-            }
-
-            return res.send(successResponse);
+            return res.send(result);
 
         } catch (err) {
             return getErrorHandler(res, err);
