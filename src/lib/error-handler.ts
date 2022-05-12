@@ -23,9 +23,8 @@ export function wrap(handler: any) {
 
 function getErrorHandler(res: Response, err: any) {
     let code = parseInt(err.statusCode || err.code);
-    console.log(err.message);
-    if (typeof code !== "number" || isNaN(code)) {
 
+    if (typeof code !== "number" || isNaN(code)) {
         code = 500;
         console.error([
             "Unexpected error thrown",
@@ -35,7 +34,7 @@ function getErrorHandler(res: Response, err: any) {
             `Raw ${err}`,
         ].join("\n"));
     }
-    res.status(code);
+    res.status(code || 500);
     res.send({
         success: false,
         code: code,

@@ -4,29 +4,29 @@ import { Request } from "express";
 import { Repository, EntityManager } from 'typeorm';
 import { Movie } from '../database/entity/movie';
 import movies from '../movies.json';
-import { validMovie } from '../lib/validation-schema';
-import { moveCursor } from 'readline';
+import { validMovie, validUpdateMovie } from '../lib/validation-schema';
+import { JsonMovieType, MovieQueryType, MovieType } from '../lib/types';
 
 export class MovieService {
 
-    private moviesTable: Repository<Movie>;
+    private moviesRepository: Repository<Movie>;
 
     constructor(private readonly tx: EntityManager) {
-        this.moviesTable = this.tx.getRepository(Movie);
+        this.moviesRepository = this.tx.getRepository(Movie);
     }
 
-    async getAll(req: Request): Promise<Movie[] | typeof movies> {
+    async getAll(req: Request): Promise<MovieType[] | JsonMovieType> {
 
-        if (Object.keys(req.query).length == 0) {
-            return this.moviesTable.find();
+        if (Object.keys(req.query).length === 0) {
+            return this.moviesRepository.find();
         }
         return this.getQueryMovies(req.query)
 
     }
 
-    async getSingle(id: string): Promise<Movie> {
+    async getSingle(id: string): Promise<MovieType> {
 
-        const movie = await this.moviesTable.findOneBy({ imdbId: id });
+        const movie = await this.moviesRepository.findOneBy({ imdbId: id });
         if (!movie) {
             throw new CodeError(`Movie with imdbID of ${id} not found!`, 400)
         }
@@ -37,69 +37,69 @@ export class MovieService {
 
         const newMovie: Movie = req.body;
 
-        if ((await this.moviesTable.findBy({ imdbId: newMovie.imdbId })).length) {
-            throw new CodeError('Movie Already Exists', 400);
-        }
-
         const { error } = validMovie.validate(newMovie);
 
         if (error) {
+            console.error(error);
             throw new CodeError(error, 400);
         }
 
-        await this.moviesTable.save(newMovie);
-
-        return { path: `${req.baseUrl}/${req.body.imdbId}` };
-
-    }
-
-    // Add documentation for the method since there are multiple scenarios :)
-    async updateOrAdd(req: Request): Promise<{}> {
-
-        const { error } = validMovie.validate(req.body);
-
-        if (error) {
-            throw new CodeError(error.details, 400);
+        if ((await this.moviesRepository.findBy({ imdbId: newMovie.imdbId })).length) {
+            throw new CodeError('Movie Already Exists', 400);
         }
 
-        const movieId = req.body.imdbId;
-
-        if ((await this.getSingle(movieId))) {
-
-            await this.editMovie(req.body);
-            return {
-                status: 'edited',
-                data: await this.getSingle(movieId),
-                path: `${req.baseUrl}/${req.body.imdbId}`
-            }
-        }
-
-        await this.addMovie(req.body);
+        await this.moviesRepository.save(newMovie);
 
         return {
             status: 'created',
-            data: await this.getSingle(movieId),
+            data: newMovie,
             path: `${req.baseUrl}/${req.body.imdbId}`
         }
+
     }
 
-    private async editMovie(editedMovie: Movie): Promise<boolean> {
+    async editMovie(req: Request): Promise<any> {
+
+        const movieId: string = req.params.imdbId;
+
+        await this.getSingle(movieId);
+
+        const editedMovie = req.body;
+        const { error } = validUpdateMovie.validate(editedMovie);
+        if (error) {
+            console.error(error);
+            throw new CodeError(error.details[0].message, 400);
+        }
 
         try {
-            await this.moviesTable.update(editedMovie.imdbId, editedMovie);
+            await this.moviesRepository.update({
+                imdbId: movieId
+            }, {
+                title: editedMovie.title,
+                year: editedMovie.year,
+                runtime: editedMovie.runtime,
+                imdbRating: editedMovie.imdbRating,
+                imdbVotes: editedMovie.imdbVotes
+            })
         } catch (error) {
+            console.error(error);
             throw new CodeError(error, 500);
         }
-        return true;
+        return {
+            status: 'edited',
+            data: editedMovie,
+            path: `${req.baseUrl}/${movieId}`
+        }
     }
 
-    async deleteMovie(movieID: string): Promise<{}> {
+    async deleteMovie(id: string): Promise<{}> {
 
-        if (await (await this.moviesTable.findBy({ imdbId: movieID })).length <= 0)
+        if ((await this.moviesRepository.findBy({ imdbId: id })).length)
             throw new CodeError('Movie Does Not Exist', 400);
         try {
-            await this.moviesTable.delete({ imdbId: movieID });
+            await this.moviesRepository.delete({ imdbId: id });
         } catch (error) {
+            console.error(error);
             throw new CodeError(error, 500);
         }
         return { success: true };
@@ -110,8 +110,8 @@ export class MovieService {
 
     //Bellow functions are for accessing JSON file, bcs no such properties in entity
 
-    private filterBy(filter: 'Genre' | 'Actors', value: any): typeof movies {
-        return movies.filter((m) => m[filter].includes(value));
+    private filterMovieBy(filter: 'Genre' | 'Actors', value: string, movie: JsonMovieType): JsonMovieType {
+        return movie.filter((m) => m[filter].includes(value));
     }
 
     private sortByRating(isASC: boolean, movieList: any[]): { Title: string, imdbRating: string }[] {
@@ -131,16 +131,16 @@ export class MovieService {
         return movieTitleAndRating;
     }
 
-    getQueryMovies({ genre, actor, imdbSort }: { genre?: string, actor?: string, imdbSort?: string }): typeof movies {
+    getQueryMovies({ genre, actor, imdbSort }: MovieQueryType): JsonMovieType {
 
         let movieList: any = movies;
 
         if (actor) {
-            movieList = this.filterBy('Actors', actor)
+            movieList = this.filterMovieBy("Actors", actor, movieList);
         }
 
         if (genre) {
-            movieList = this.filterBy('Genre', genre)
+            movieList = this.filterMovieBy("Genre", genre, movieList);
         }
 
         if (imdbSort) {

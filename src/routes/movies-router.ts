@@ -8,26 +8,32 @@ const router = express.Router();
 
 router.use(express.json());
 
-//GET || POST || PUT : /movies
+
 router.route('/')
+    // GET: /movies                          or
+    // GET: /movies?{actor=Actor Name}       or
+    // GET: /movies?{genre=Genre}            or
+    // GET: /movies?{imdbSort=ASC || DESC }  or
     .get(wrap((req: Request, _: Response, entityManager: EntityManager) => {
         return new MovieService(entityManager).getAll(req);
     }))
+    //POST: /movies
     .post(wrap((req: Request, _: Response, entityManager: EntityManager) => {
         return new MovieService(entityManager).addMovie(req);
-    }))
-    .put(wrap((req: Request, _: Response, entityManager: EntityManager) => {
-        return new MovieService(entityManager).updateOrAdd(req);
     }));
 
-//GET || DELETE :/movies/{imdbId}
+//GET || PATCH || DELETE : /movies/{imdbId}
 router.route('/:imdbId')
     .get(wrap((req: Request, _: Response, entityManager: EntityManager) => {
-        return new MovieService(entityManager).getSingle(req.body.imdbId);
+        return new MovieService(entityManager).getSingle(req.params.imdbId);
+    }))
+    .patch(wrap((req: Request, _: Response, entityManager: EntityManager) => {
+        return new MovieService(entityManager).editMovie(req);
     }))
     .delete(wrap((req: Request, _: Response, entityManager: EntityManager) => {
-        return new MovieService(entityManager).deleteMovie(req.body.imdbId);
-    }))
+        return new MovieService(entityManager).deleteMovie(req.params.imdbId);
+    }));
+
 
 //GET: /movies/data/{dataType}
 router.route('/data/:dataType')

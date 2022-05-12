@@ -1,6 +1,5 @@
 import "reflect-metadata";
 import express from "express";
-import path from "path";
 import { router as moviesRouter } from "./routes/movies-router";
 import { config } from "../src/config";
 import { DatabaseConnection } from "./database/connection";
