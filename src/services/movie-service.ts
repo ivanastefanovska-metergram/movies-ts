@@ -60,7 +60,7 @@ export class MovieService {
 
     async editMovie(req: Request): Promise<any> {
 
-        const movieId: string = req.params.imdbId;
+        const movieId: string = req.params.imdbId || req.body.imdbId;
 
         await this.getSingle(movieId);
 
@@ -92,10 +92,17 @@ export class MovieService {
         }
     }
 
+    async editOrAddMovie(req: Request) {
+        if (await this.moviesRepository.findOneBy({ imdbId: req.body.imdbId })) {
+            return this.editMovie(req)
+        }
+        return this.addMovie(req);
+    }
+
     async deleteMovie(id: string): Promise<{}> {
 
-        if ((await this.moviesRepository.findBy({ imdbId: id })).length)
-            throw new CodeError('Movie Does Not Exist', 400);
+        await this.getSingle(id)
+
         try {
             await this.moviesRepository.delete({ imdbId: id });
         } catch (error) {

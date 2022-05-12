@@ -23,7 +23,9 @@ export const validMovie = Joi.object({
 });
 
 export const validUpdateMovie = Joi.object({
-    imdbId: Joi.forbidden(),
+    imdbId: Joi.string()
+        .pattern(new RegExp('(tt|nm|co|ev|ch|ni)\\w{5,10}'))
+        .optional(),
     title: Joi.string().optional(),
     year: Joi.number()
         .min(1700)

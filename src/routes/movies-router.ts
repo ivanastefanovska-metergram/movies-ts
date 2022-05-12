@@ -20,6 +20,10 @@ router.route('/')
     //POST: /movies
     .post(wrap((req: Request, _: Response, entityManager: EntityManager) => {
         return new MovieService(entityManager).addMovie(req);
+    }))
+    //PUT: /movies
+    .put(wrap((req: Request, _: Response, entityManager: EntityManager) => {
+        return new MovieService(entityManager).editOrAddMovie(req);
     }));
 
 //GET || PATCH || DELETE : /movies/{imdbId}
