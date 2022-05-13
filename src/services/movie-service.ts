@@ -1,12 +1,11 @@
 
 import { CodeError } from '../lib/custom-error';
 import { Request } from "express";
-import { Repository, EntityManager, Code } from 'typeorm';
+import { Repository, EntityManager } from 'typeorm';
 import { Movie } from '../database/entity/movie';
 import movies from '../movies.json';
 import { validMovie, validPatchMovie } from '../lib/validation-schema';
 import { JsonMovieType, MovieQueryType, MovieType } from '../lib/types';
-import Joi from 'joi';
 
 export class MovieService {
 
@@ -16,27 +15,20 @@ export class MovieService {
         this.moviesRepository = this.tx.getRepository(Movie);
     }
 
-    async getAll(req: Request): Promise<MovieType[] | JsonMovieType> {
-
-        if (Object.keys(req.query).length === 0) {
-            return this.moviesRepository.find();
-        }
-        return this.getQueryMovies(req.query)
-
+    async getAllMovies(): Promise<MovieType[]> {
+        return this.moviesRepository.find();
     }
 
-    async getSingle(id: string): Promise<MovieType> {
+    async getSingleMovie(id: string): Promise<MovieType> {
 
-        const movie = await this.moviesRepository.findOneBy({ imdbId: id });
+        const movie: MovieType | null = await this.moviesRepository.findOneBy({ imdbId: id });
         if (!movie) {
             throw new CodeError(`Movie with imdbID of ${id} not found!`, 400)
         }
         return movie;
     }
 
-    async addMovie(req: Request): Promise<{}> {
-
-        const newMovie: Movie = req.body;
+    async addMovie(baseUrl: string, newMovie: MovieType): Promise<{}> {
 
         const { error } = validMovie.validate(newMovie);
 
@@ -54,23 +46,21 @@ export class MovieService {
         return {
             status: 'created',
             data: newMovie,
-            path: `${req.baseUrl}/${req.body.imdbId}`
+            path: `${baseUrl}/${newMovie.imdbId}`
         }
 
     }
 
-    async editMovie(req: Request): Promise<any> {
+    async editMovie(reqParams: any, baseUrl: string, editedMovie: MovieType): Promise<any> {
 
-        const movieId: string = req.params.imdbId || req.body.imdbId;
+        const movieId: string = reqParams.imdbId || editedMovie.imdbId;
 
-        if (movieId !== req.body.imdbId) {
+        if (movieId !== editedMovie.imdbId) {
             throw new CodeError('Request parameter does not match movie id !', 400);
         }
 
-        const editedMovie = req.body;
-
         let { error } = validPatchMovie.validate(editedMovie);
-        if (req.method == 'PUT') {
+        if (reqParams.method == 'PUT') {
             error = validMovie.validate(editedMovie).error;
         }
 
@@ -79,9 +69,7 @@ export class MovieService {
             throw new CodeError(error.details[0].message, 400);
         }
 
-
-
-        await this.getSingle(movieId);
+        await this.getSingleMovie(movieId);
 
         try {
             await this.moviesRepository.update({
@@ -100,20 +88,20 @@ export class MovieService {
         return {
             status: 'edited',
             data: editedMovie,
-            path: `${req.baseUrl}/${movieId}`
+            path: `${baseUrl}/${movieId}`
         }
     }
 
-    async editOrAddMovie(req: Request) {
-        if (await this.moviesRepository.findOneBy({ imdbId: req.body.imdbId })) {
-            return this.editMovie(req)
+    async editOrAddMovie(reqParams: any, baseUrl: string, movie: MovieType) {
+        if (await this.moviesRepository.findOneBy({ imdbId: movie.imdbId })) {
+            return this.editMovie(reqParams, baseUrl, movie);
         }
-        return this.addMovie(req);
+        return this.addMovie(baseUrl, movie);
     }
 
     async deleteMovie(id: string): Promise<{}> {
 
-        await this.getSingle(id)
+        await this.getSingleMovie(id)
 
         try {
             await this.moviesRepository.delete({ imdbId: id });

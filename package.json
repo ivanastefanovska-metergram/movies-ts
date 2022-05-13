@@ -19,9 +19,7 @@
   "dependencies": {
     "express": "^4.18.1",
     "joi": "^17.6.0",
-    "joi-validate-partial": "^1.0.3",
     "pg": "^8.7.3",
-    "reflect-metadata": "^0.1.13",
     "typeorm": "^0.3.6"
   }
 }
