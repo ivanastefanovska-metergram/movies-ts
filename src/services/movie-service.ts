@@ -1,11 +1,12 @@
 
 import { CodeError } from '../lib/custom-error';
 import { Request } from "express";
-import { Repository, EntityManager } from 'typeorm';
+import { Repository, EntityManager, Code } from 'typeorm';
 import { Movie } from '../database/entity/movie';
 import movies from '../movies.json';
-import { validMovie, validUpdateMovie } from '../lib/validation-schema';
+import { validMovie, validPatchMovie } from '../lib/validation-schema';
 import { JsonMovieType, MovieQueryType, MovieType } from '../lib/types';
+import Joi from 'joi';
 
 export class MovieService {
 
@@ -62,14 +63,25 @@ export class MovieService {
 
         const movieId: string = req.params.imdbId || req.body.imdbId;
 
-        await this.getSingle(movieId);
+        if (movieId !== req.body.imdbId) {
+            throw new CodeError('Request parameter does not match movie id !', 400);
+        }
 
         const editedMovie = req.body;
-        const { error } = validUpdateMovie.validate(editedMovie);
+
+        let { error } = validPatchMovie.validate(editedMovie);
+        if (req.method == 'PUT') {
+            error = validMovie.validate(editedMovie).error;
+        }
+
         if (error) {
             console.error(error);
             throw new CodeError(error.details[0].message, 400);
         }
+
+
+
+        await this.getSingle(movieId);
 
         try {
             await this.moviesRepository.update({

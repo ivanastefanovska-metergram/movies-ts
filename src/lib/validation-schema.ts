@@ -22,7 +22,7 @@ export const validMovie = Joi.object({
         .required()
 });
 
-export const validUpdateMovie = Joi.object({
+export const validPatchMovie = Joi.object({
     imdbId: Joi.string()
         .pattern(new RegExp('(tt|nm|co|ev|ch|ni)\\w{5,10}'))
         .optional(),
